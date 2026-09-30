@@ -3,10 +3,9 @@ import sys
 from pathlib import Path
 from datetime import datetime
 
-# 어제 만든 weekly_agent.py는 수정하지 않고, 보고서 읽기/API 키 로딩 기능만 가져다 쓴다.
-from weekly_agent import load_api_key, load_team_reports, build_user_prompt
-
 from anthropic import Anthropic
+
+MODEL = "claude-sonnet-5-5"
 
 
 SECTIONS = [
@@ -45,10 +44,34 @@ SYSTEM_PROMPT = """당신은 여러 부서의 주간보고를 읽고, 부서들�
 
 
 def build_prompt(reports: list[tuple[str, str]]) -> str:
-    return build_user_prompt(reports) + (
+    parts = ["다음은 각 팀의 이번 주 보고서 원문입니다. 사안을 인용할 때 파일명을 출처로 사용하세요.\n"]
+    for name, text in reports:
+        parts.append(f"----- 파일: {name} -----\n{text}\n")
+    parts.append(
         "\n위 보고서들에서 부서 간 공통 문제를 찾아 제안서를 작성하세요. "
         "근거는 파일명을 사용하세요."
     )
+    return "\n".join(parts)
+
+
+def generate_proposal(reports: list[tuple[str, str]], api_key: str) -> str:
+    """보고서 목록 [(파일명, 내용)]으로 제안서 본문(마크다운)을 만든다. 실패하면 RuntimeError."""
+    client = Anthropic(api_key=api_key)
+    with client.messages.stream(
+        model=MODEL,
+        max_tokens=32000,
+        system=SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": build_prompt(reports)}],
+    ) as stream:
+        message = stream.get_final_message()
+    if message.stop_reason == "max_tokens":
+        raise RuntimeError("응답이 길이 제한에서 잘려 제안서가 완성되지 않았습니다.")
+    proposal = next((b.text for b in message.content if b.type == "text"), None)
+    if not proposal:
+        raise RuntimeError(
+            f"모델 응답에서 텍스트를 받지 못했습니다 (stop_reason: {message.stop_reason})."
+        )
+    return proposal
 
 
 def check_sections(text: str) -> list[str]:
@@ -81,26 +104,14 @@ def main() -> None:
     # 결과는 보고서 폴더와 분리해 저장한다. (같은 폴더에 두면 어제 프로그램이 제안서를 팀 보고서로 읽게 된다.)
     output_dir = Path(sys.argv[2] if len(sys.argv) > 2 else "제안서_결과")
 
+    # 어제 만든 weekly_agent.py는 수정하지 않고, 보고서 읽기/API 키 로딩 기능만 가져다 쓴다.
+    # (import 시 콘솔 설정이 바뀌므로 웹앱에서는 불러오지 않도록 여기서만 가져온다.)
+    from weekly_agent import load_api_key, load_team_reports
+
     try:
         api_key = load_api_key()
         reports = load_team_reports(folder)
-
-        client = Anthropic(api_key=api_key)
-        message = client.messages.create(
-            model="claude-sonnet-5-5",
-            max_tokens=20000,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": build_prompt(reports)}],
-        )
-        if message.stop_reason == "max_tokens":
-            raise RuntimeError("응답이 길이 제한에서 잘려 제안서가 완성되지 않았습니다.")
-        proposal = next(
-            (block.text for block in message.content if block.type == "text"), None
-        )
-        if not proposal:
-            raise RuntimeError(
-                f"모델 응답에서 텍스트를 받지 못했습니다 (stop_reason: {message.stop_reason})."
-            )
+        proposal = generate_proposal(reports, api_key)
     except Exception as e:
         print(f"오류가 발생해 제안서를 생성하지 못했습니다: {e}")
         sys.exit(1)
