@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>에어콩콩 전기계장팀 소개</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  :root {
+    --bg: #f4f7fb;
+    --card: #ffffff;
+    --text: #1c2733;
+    --muted: #5b6b7b;
+    --primary: #1f6feb;
+    --accent: #f5b301;
+    --line: #e2e8f0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Pretendard Variable", Pretendard, -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+  }
+  header {
+    background: linear-gradient(135deg, #0f3d91, #1f6feb);
+    color: #fff;
+    padding: 72px 20px 64px;
+    text-align: center;
+  }
+  header .company { font-size: 1rem; letter-spacing: .15em; opacity: .85; }
+  header h1 { font-size: 2.6rem; margin: 8px 0 12px; }
+  header h1 span { color: var(--accent); }
+  header p { font-size: 1.1rem; opacity: .92; }
+  main { max-width: 960px; margin: 0 auto; padding: 40px 20px 20px; }
+  section { margin-bottom: 44px; }
+  h2 {
+    font-size: 1.4rem;
+    margin-bottom: 18px;
+    padding-left: 12px;
+    border-left: 5px solid var(--accent);
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(15, 61, 145, .06);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+  }
+  .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+  .card h3 { font-size: 1.1rem; margin-bottom: 6px; }
+  .card p { color: var(--muted); font-size: .95rem; }
+  .bar {
+    height: 10px;
+    background: var(--line);
+    border-radius: 99px;
+    overflow: hidden;
+    margin-top: 14px;
+  }
+  .bar i { display: block; height: 100%; background: var(--primary); border-radius: 99px; }
+  .pct { font-size: .85rem; color: var(--muted); margin-top: 4px; text-align: right; }
+  .form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    align-items: end;
+  }
+  .form label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 4px; }
+  .form input, .form select {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font: inherit;
+    background: #fff;
+    color: var(--text);
+  }
+  button {
+    font: inherit;
+    cursor: pointer;
+    border: 0;
+    border-radius: 8px;
+    padding: 10px 16px;
+    background: var(--primary);
+    color: #fff;
+    font-weight: bold;
+  }
+  button:hover { filter: brightness(1.1); }
+  button.ghost { background: transparent; color: var(--muted); padding: 4px 8px; font-weight: normal; }
+  button.ghost:hover { color: #c62828; }
+  .msg { color: #c62828; font-size: .9rem; margin-top: 10px; min-height: 1.2em; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: .85rem; color: var(--muted); margin-bottom: 14px; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; }
+  .c0 { background: #1f6feb; } .c1 { background: #f5a300; } .c2 { background: #2e9e6b; }
+  .gantt-axis { display: flex; justify-content: space-between; font-size: .8rem; color: var(--muted); margin-left: 150px; margin-bottom: 6px; }
+  .g-row { display: flex; align-items: center; margin-bottom: 8px; }
+  .g-label { width: 150px; flex: none; font-size: .85rem; padding-right: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .g-track { position: relative; flex: 1; height: 24px; background: var(--bg); border-radius: 6px; }
+  .g-bar { position: absolute; top: 3px; bottom: 3px; border-radius: 5px; min-width: 6px; }
+  .g-today { position: absolute; top: -4px; bottom: -4px; width: 2px; background: #e53935; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 22px; }
+  th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: normal; font-size: .85rem; }
+  .empty { color: var(--muted); text-align: center; padding: 20px 0; }
+  @media (max-width: 600px) {
+    .g-label { width: 90px; } .gantt-axis { margin-left: 90px; }
+  }
+  footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: .85rem;
+    padding: 24px 20px 40px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="company">에어콩콩</div>
+  <h1>전기계장팀 <span>소개</span></h1>
+  <p>안전하고 정확한 프로젝트 전기공사를 수행합니다</p>
+</header>
+
+<main>
+  <section>
+    <h2>우리 팀이 하는 일</h2>
+    <div class="card">
+      <h3>프로젝트 전기공사 수행</h3>
+      <p>에어콩콩 전기계장팀은 각 프로젝트의 전기공사를 계획부터 시공, 마무리까지 책임지고 수행합니다.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>내가 맡은 일</h2>
+    <div class="grid">
+      <div class="card">
+        <div class="num">1</div>
+        <h3>시공 일정 수립</h3>
+        <p>공정별 작업 순서와 기간을 정리해 전체 시공 일정을 세웁니다.</p>
+      </div>
+      <div class="card">
+        <div class="num">2</div>
+        <h3>자재 납품 일정 확인</h3>
+        <p>필요한 자재가 제때 현장에 들어오는지 납품 일정을 확인합니다.</p>
+      </div>
+      <div class="card">
+        <div class="num">3</div>
+        <h3>전기설계 확인</h3>
+        <p>도면과 설계 내용을 검토해 시공에 문제가 없는지 확인합니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>업무 일정 만들기</h2>
+    <div class="card">
+      <form id="form" class="form">
+        <div>
+          <label for="type">업무</label>
+          <select id="type">
+            <option value="0">시공 일정 수립</option>
+            <option value="1">자재 납품 일정 확인</option>
+            <option value="2">전기설계 확인</option>
+          </select>
+        </div>
+        <div>
+          <label for="memo">내용 (선택)</label>
+          <input id="memo" type="text" maxlength="40" placeholder="예: 1층 배선 공사">
+        </div>
+        <div>
+          <label for="start">시작일</label>
+          <input id="start" type="date" required>
+        </div>
+        <div>
+          <label for="end">종료일</label>
+          <input id="end" type="date" required>
+        </div>
+        <button type="submit">일정 추가</button>
+      </form>
+      <div class="msg" id="msg"></div>
+
+      <div class="legend">
+        <span><i class="dot c0"></i>시공 일정 수립</span>
+        <span><i class="dot c1"></i>자재 납품 일정 확인</span>
+        <span><i class="dot c2"></i>전기설계 확인</span>
+        <span><i class="dot" style="background:#e53935;width:3px"></i>오늘</span>
+      </div>
+      <div style="margin:0 0 14px"><button type="button" id="export">엑셀로 공사 스케줄 내보내기</button></div>
+      <div id="gantt"></div>
+      <table>
+        <thead><tr><th>업무</th><th>내용</th><th>시작일</th><th>종료일</th><th>기간</th><th></th></tr></thead>
+        <tbody id="list"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>이번 분기 목표</h2>
+    <div class="grid">
+      <div class="card">
+        <div class="num">1</div>
+        <h3>프로젝트 A 완료</h3>
+        <div class="bar"><i style="width:80%"></i></div>
+        <div class="pct">진행률 80%</div>
+      </div>
+      <div class="card">
+        <div class="num">2</div>
+        <h3>프로젝트 B 완료</h3>
+        <div class="bar"><i style="width:55%"></i></div>
+        <div class="pct">진행률 55%</div>
+      </div>
+      <div class="card">
+        <div class="num">3</div>
+        <h3>프로젝트 C 완료</h3>
+        <div class="bar"><i style="width:30%"></i></div>
+        <div class="pct">진행률 30%</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>※ 이 페이지의 모든 내용과 수치는 연습용입니다.</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<script>
+(function () {
+  var NAMES = ["시공 일정 수립", "자재 납품 일정 확인", "전기설계 확인"];
+  var KEY = "aircongcong-schedule";
+  var DAY = 86400000;
+  var items = load();
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    // 처음 열었을 때 보여줄 연습용 예시
+    var t = new Date(), y = t.getFullYear(), m = t.getMonth();
+    function d(day) { return fmt(new Date(y, m, day)); }
+    return [
+      { type: 2, memo: "전기 도면 검토", start: d(1), end: d(7) },
+      { type: 1, memo: "케이블·분전반 납품", start: d(5), end: d(14) },
+      { type: 0, memo: "1층 배선 공사", start: d(10), end: d(24) }
+    ];
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(items)); } catch (e) {}
+  }
+  function fmt(dt) {
+    var mm = String(dt.getMonth() + 1).padStart(2, "0");
+    var dd = String(dt.getDate()).padStart(2, "0");
+    return dt.getFullYear() + "-" + mm + "-" + dd;
+  }
+  function ts(s) { var p = s.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]).getTime(); }
+  function days(a, b) { return Math.round((ts(b) - ts(a)) / DAY) + 1; }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  function render() {
+    items.sort(function (a, b) { return ts(a.start) - ts(b.start) || ts(a.end) - ts(b.end); });
+    var gantt = document.getElementById("gantt");
+    var list = document.getElementById("list");
+    gantt.textContent = "";
+    list.textContent = "";
+
+    if (!items.length) {
+      var tr = el("tr"), td = el("td", "empty", "등록된 일정이 없습니다. 위에서 일정을 추가해 보세요.");
+      td.colSpan = 6; tr.appendChild(td); list.appendChild(tr);
+      return;
+    }
+
+    var min = Math.min.apply(null, items.map(function (i) { return ts(i.start); }));
+    var max = Math.max.apply(null, items.map(function (i) { return ts(i.end); }));
+    var today = new Date(); today = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    var lo = Math.min(min, today), hi = Math.max(max, today);
+    var span = hi - lo + DAY;
+
+    var axis = el("div", "gantt-axis");
+    axis.appendChild(el("span", null, fmt(new Date(lo))));
+    axis.appendChild(el("span", null, fmt(new Date(hi))));
+    gantt.appendChild(axis);
+
+    items.forEach(function (it, idx) {
+      var row = el("div", "g-row");
+      row.appendChild(el("div", "g-label", it.memo || NAMES[it.type]));
+      var track = el("div", "g-track");
+      var bar = el("div", "g-bar c" + it.type);
+      bar.style.left = ((ts(it.start) - lo) / span * 100) + "%";
+      bar.style.width = ((ts(it.end) - ts(it.start) + DAY) / span * 100) + "%";
+      bar.title = NAMES[it.type] + " " + it.start + " ~ " + it.end;
+      track.appendChild(bar);
+      var tl = el("div", "g-today");
+      tl.style.left = ((today - lo) / span * 100) + "%";
+      track.appendChild(tl);
+      row.appendChild(track);
+      gantt.appendChild(row);
+
+      var tr = el("tr");
+      var c = el("td"); var dot = el("i", "dot c" + it.type); c.appendChild(dot); c.appendChild(document.createTextNode(NAMES[it.type]));
+      tr.appendChild(c);
+      tr.appendChild(el("td", null, it.memo || "-"));
+      tr.appendChild(el("td", null, it.start));
+      tr.appendChild(el("td", null, it.end));
+      tr.appendChild(el("td", null, days(it.start, it.end) + "일"));
+      var del = el("td"); var b = el("button", "ghost", "삭제"); b.type = "button";
+      b.addEventListener("click", function () { items.splice(idx, 1); save(); render(); });
+      del.appendChild(b); tr.appendChild(del);
+      list.appendChild(tr);
+    });
+  }
+
+  var startEl = document.getElementById("start");
+  var endEl = document.getElementById("end");
+  startEl.addEventListener("change", function () {
+    if (!endEl.value || endEl.value < startEl.value) endEl.value = startEl.value;
+    endEl.min = startEl.value;
+  });
+
+  document.getElementById("form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var msg = document.getElementById("msg");
+    if (!startEl.value || !endEl.value) { msg.textContent = "시작일과 종료일을 모두 입력해 주세요."; return; }
+    if (endEl.value < startEl.value) { msg.textContent = "종료일은 시작일보다 빠를 수 없습니다."; return; }
+    msg.textContent = "";
+    items.push({
+      type: +document.getElementById("type").value,
+      memo: document.getElementById("memo").value.trim(),
+      start: startEl.value,
+      end: endEl.value
+    });
+    save(); render();
+    document.getElementById("memo").value = "";
+  });
+
+  function utc(s) { var p = s.split("-"); return new Date(Date.UTC(+p[0], +p[1] - 1, +p[2])); }
+
+  document.getElementById("export").addEventListener("click", function () {
+    if (!items.length) { alert("내보낼 일정이 없습니다. 먼저 일정을 추가해 주세요."); return; }
+    if (typeof ExcelJS === "undefined") { alert("엑셀 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요."); return; }
+
+    var COLORS = ["FF1F6FEB", "FFF5A300", "FF2E9E6B"];
+    var sorted = items.slice().sort(function (a, b) { return ts(a.start) - ts(b.start) || ts(a.end) - ts(b.end); });
+    var lo = Math.min.apply(null, sorted.map(function (i) { return ts(i.start); }));
+    var hi = Math.max.apply(null, sorted.map(function (i) { return ts(i.end); }));
+    var nDays = Math.round((hi - lo) / DAY) + 1;
+    var withGrid = nDays <= 366;
+    var FIX = 6; // 고정 열 수
+
+    var wb = new ExcelJS.Workbook();
+    var ws = wb.addWorksheet("공사 스케줄", { views: [{ state: "frozen", xSplit: FIX, ySplit: 5 }] });
+    var thin = { style: "thin", color: { argb: "FFCBD5E1" } };
+    var border = { top: thin, left: thin, bottom: thin, right: thin };
+    var lastCol = FIX + (withGrid ? nDays : 0);
+
+    ws.mergeCells(1, 1, 1, Math.max(lastCol, FIX));
+    var t = ws.getCell(1, 1);
+    t.value = "에어콩콩 전기계장팀 공사 스케줄";
+    t.font = { size: 16, bold: true, color: { argb: "FF0F3D91" } };
+    t.alignment = { vertical: "middle" };
+    ws.getRow(1).height = 30;
+    ws.getCell(2, 1).value = "작성일: " + fmt(new Date()) + "  /  ※ 연습용 자료";
+    ws.getCell(2, 1).font = { color: { argb: "FF5B6B7B" } };
+    ws.getCell(3, 1).value = "공사 기간: " + fmt(new Date(lo)) + " ~ " + fmt(new Date(hi)) + " (" + nDays + "일)";
+    ws.getCell(3, 1).font = { color: { argb: "FF5B6B7B" } };
+
+    var heads = ["No", "업무", "내용", "시작일", "종료일", "기간(일)"];
+    var widths = [6, 22, 26, 12, 12, 10];
+    heads.forEach(function (h, i) {
+      ws.mergeCells(4, i + 1, 5, i + 1);
+      ws.getColumn(i + 1).width = widths[i];
+      ws.getCell(4, i + 1).value = h;
+    });
+
+    if (withGrid) {
+      var monthStart = 0;
+      for (var d = 0; d < nDays; d++) {
+        var dt = new Date(lo + d * DAY);
+        var col = FIX + 1 + d;
+        ws.getColumn(col).width = 3.6;
+        var c = ws.getCell(5, col);
+        c.value = dt.getDate();
+        var wd = dt.getDay();
+        c.font = { size: 9, color: { argb: wd === 0 ? "FFC62828" : wd === 6 ? "FF1F6FEB" : "FF1C2733" } };
+        c.alignment = { horizontal: "center" };
+        var last = d === nDays - 1 || new Date(lo + (d + 1) * DAY).getMonth() !== dt.getMonth();
+        if (last) {
+          var from = FIX + 1 + monthStart;
+          if (from < col) ws.mergeCells(4, from, 4, col);
+          ws.getCell(4, from).value = (dt.getMonth() + 1) + "월";
+          monthStart = d + 1;
+        }
+      }
+    }
+
+    for (var r = 4; r <= 5; r++) {
+      for (var cc = 1; cc <= lastCol; cc++) {
+        var hc = ws.getCell(r, cc);
+        hc.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE8EEF8" } };
+        hc.border = border;
+        hc.alignment = { horizontal: "center", vertical: "middle" };
+        if (r === 4 || cc <= FIX) hc.font = Object.assign({ bold: true }, hc.font || {});
+      }
+    }
+
+    sorted.forEach(function (it, i) {
+      var row = 6 + i;
+      var vals = [i + 1, NAMES[it.type], it.memo || "", utc(it.start), utc(it.end), days(it.start, it.end)];
+      vals.forEach(function (v, k) {
+        var cell = ws.getCell(row, k + 1);
+        cell.value = v;
+        cell.border = border;
+        cell.alignment = { horizontal: k === 1 || k === 2 ? "left" : "center", vertical: "middle" };
+        if (k === 3 || k === 4) cell.numFmt = "yyyy-mm-dd";
+      });
+      ws.getCell(row, 2).font = { bold: true, color: { argb: COLORS[it.type] } };
+      if (withGrid) {
+        for (var d2 = 0; d2 < nDays; d2++) {
+          var day = lo + d2 * DAY;
+          var gc = ws.getCell(row, FIX + 1 + d2);
+          gc.border = border;
+          if (day >= ts(it.start) && day <= ts(it.end)) {
+            gc.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLORS[it.type] } };
+          } else if (new Date(day).getDay() % 6 === 0) {
+            gc.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF1F5F9" } };
+          }
+        }
+      }
+    });
+
+    if (!withGrid) {
+      ws.getCell(sorted.length + 7, 1).value = "※ 공사 기간이 366일을 넘어 일별 달력은 생략했습니다.";
+    }
+
+    wb.xlsx.writeBuffer().then(function (buf) {
+      var blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "공사스케줄_" + fmt(new Date()) + ".xlsx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    });
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
