@@ -1,0 +1,1241 @@
+<title>전기 시공 일정 계산기</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@500;700;900&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* 레이아웃: 상단 프로젝트 정보 → 4개 공종 카드(포함 토글+세부입력) → 계산 버튼 → 결과 요약/표/타임라인 */
+:root{
+  --bg:#f2efe6;
+  --surface:#ffffff;
+  --surface-2:#faf8f2;
+  --fg:#20211d;
+  --muted:#6f6d63;
+  --border:#ddd7c6;
+  --accent:#b5540c;
+  --accent-fg:#fff8ef;
+  --accent-soft:#f1decb;
+  --critical:#ad2c22;
+  --weekend:#e6e1d1;
+  --holiday:#e9c9a6;
+  --track:#eeebe0;
+  --ok:#3f7d51;
+  --off:#a9a394;
+  color-scheme: light;
+
+  --font-display:'Gothic A1', 'Pretendard', sans-serif;
+  --font-body:'IBM Plex Sans KR', 'Pretendard', sans-serif;
+  --font-mono:'IBM Plex Mono', ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#12130f;
+    --surface:#1b1c17;
+    --surface-2:#212219;
+    --fg:#ecebe3;
+    --muted:#a29d8c;
+    --border:#33342a;
+    --accent:#e2914c;
+    --accent-fg:#241505;
+    --accent-soft:#3a2c1c;
+    --critical:#e8756a;
+    --weekend:#26271f;
+    --holiday:#3d2f1c;
+    --track:#1f2018;
+    --ok:#7dc48f;
+    --off:#5c5a4f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12130f;
+  --surface:#1b1c17;
+  --surface-2:#212219;
+  --fg:#ecebe3;
+  --muted:#a29d8c;
+  --border:#33342a;
+  --accent:#e2914c;
+  --accent-fg:#241505;
+  --accent-soft:#3a2c1c;
+  --critical:#e8756a;
+  --weekend:#26271f;
+  --holiday:#3d2f1c;
+  --track:#1f2018;
+  --ok:#7dc48f;
+  --off:#5c5a4f;
+  color-scheme: dark;
+}
+
+*{box-sizing:border-box;}
+body{
+  background:var(--bg);
+  color:var(--fg);
+  font-family:var(--font-body);
+  padding-inline:20px;
+  padding-block:28px;
+  max-width:920px;
+  margin:0 auto;
+}
+h1,h2,h3{font-family:var(--font-display); margin:0; text-wrap:balance;}
+.tabular{font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
+
+header.page{margin-bottom:22px;}
+header.page h1{font-size:clamp(22px,5vw,30px); font-weight:900; letter-spacing:-0.01em;}
+header.page p{margin:8px 0 0; color:var(--muted); font-size:14px; line-height:1.6; max-width:64ch;}
+.badge{
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:12px; font-weight:600; color:var(--accent);
+  background:var(--accent-soft); border-radius:999px; padding:4px 10px;
+  margin-top:12px;
+}
+
+.card{
+  background:var(--surface); border:1px solid var(--border); border-radius:14px;
+  padding:18px; margin-bottom:14px;
+}
+.card + .card{margin-top:14px;}
+.card-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:4px;}
+.card-head h2{font-size:16px; font-weight:700;}
+.card-sub{font-size:12.5px; color:var(--muted); margin:2px 0 14px; line-height:1.5;}
+.task-code{
+  font-family:var(--font-mono); font-size:11px; color:var(--muted);
+  background:var(--surface-2); border:1px solid var(--border); border-radius:6px;
+  padding:2px 6px; margin-left:8px;
+}
+
+.switch{position:relative; display:inline-block; width:42px; height:24px; flex:none;}
+.switch input{opacity:0; width:0; height:0;}
+.switch .slider{
+  position:absolute; inset:0; background:var(--off); border-radius:999px; cursor:pointer;
+  transition:background .15s ease;
+}
+.switch .slider::before{
+  content:""; position:absolute; width:18px; height:18px; left:3px; top:3px;
+  background:var(--surface); border-radius:50%; transition:transform .15s ease;
+}
+.switch input:checked + .slider{background:var(--accent);}
+.switch input:checked + .slider::before{transform:translateX(18px);}
+.switch input:focus-visible + .slider{outline:2px solid var(--accent); outline-offset:2px;}
+
+.field-grid{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px 14px;
+}
+.field{display:flex; flex-direction:column; gap:5px; min-width:0;}
+.field label{font-size:12.5px; color:var(--muted); font-weight:500;}
+.field .hint{font-size:11px; color:var(--muted); margin-top:2px;}
+input[type=number], input[type=date], input[type=text], select{
+  font:inherit; font-family:var(--font-mono);
+  background:var(--surface-2); border:1px solid var(--border); border-radius:8px;
+  padding:8px 10px; color:var(--fg); width:100%;
+}
+select{font-family:var(--font-body);}
+input:focus, select:focus{outline:2px solid var(--accent); outline-offset:1px;}
+
+.weekday-row{display:flex; flex-wrap:wrap; gap:8px;}
+.chip-toggle{
+  font-size:13px; font-family:var(--font-mono); border:1px solid var(--border);
+  background:var(--surface-2); color:var(--muted); border-radius:8px;
+  padding:7px 10px; cursor:pointer; user-select:none;
+}
+.chip-toggle input{position:absolute; opacity:0; pointer-events:none;}
+.chip-toggle.on{background:var(--accent-soft); border-color:var(--accent); color:var(--accent); font-weight:600;}
+
+.holiday-row{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+.holiday-row input[type=date]{width:auto; flex:1; min-width:150px;}
+.btn{
+  font:inherit; font-weight:600; border:none; border-radius:9px; cursor:pointer;
+  padding:8px 14px; background:var(--surface-2); color:var(--fg); border:1px solid var(--border);
+}
+.btn:hover{border-color:var(--accent);}
+.btn.primary{background:var(--accent); color:var(--accent-fg); border-color:var(--accent);}
+.btn.primary:hover{filter:brightness(1.05);}
+.btn.block{width:100%; padding:13px; font-size:15px; border-radius:12px;}
+.btn.excel{background:var(--ok); color:#fff; border-color:var(--ok); margin-top:14px;}
+.btn.excel:hover{filter:brightness(1.05);}
+.btn.excel:disabled{opacity:0.6; cursor:default;}
+.export-status{font-size:12px; color:var(--muted); margin-top:8px;}
+.tag-list{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;}
+.tag{
+  display:flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:12px;
+  background:var(--surface-2); border:1px solid var(--border); border-radius:999px; padding:4px 6px 4px 10px;
+}
+.tag button{
+  background:none; border:none; color:var(--muted); cursor:pointer; font-size:13px; line-height:1;
+  padding:2px;
+}
+.tag button:hover{color:var(--critical);}
+
+.detail-body[hidden]{display:none;}
+.detail-body{margin-top:12px; padding-top:12px; border-top:1px dashed var(--border);}
+
+.summary-row{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px;
+  margin-bottom:16px;
+}
+.summary-tile{
+  background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 14px;
+}
+.summary-tile .label{font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em;}
+.summary-tile .value{font-family:var(--font-mono); font-size:19px; font-weight:600; margin-top:4px;}
+.summary-tile.accent{border-color:var(--accent); background:var(--accent-soft);}
+.summary-tile.accent .value{color:var(--accent);}
+.summary-tile.warn{border-color:var(--critical); background:color-mix(in srgb, var(--critical) 12%, var(--surface));}
+.summary-tile.warn .value{color:var(--critical);}
+.summary-tile.ok{border-color:var(--ok); background:color-mix(in srgb, var(--ok) 12%, var(--surface));}
+.summary-tile.ok .value{color:var(--ok);}
+
+.checklist{display:flex; flex-direction:column; gap:0;}
+.check-row{
+  display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border);
+  flex-wrap:wrap;
+}
+.check-row:last-child{border-bottom:none;}
+.check-row .cr-label{flex:1 1 180px; font-size:13.5px; min-width:0;}
+.check-row .cr-label .cr-sub{display:block; font-size:11px; color:var(--muted); margin-top:2px;}
+.check-row .cr-field{display:flex; align-items:center; gap:8px; flex:0 0 auto;}
+.check-row .cr-field input{width:80px;}
+.check-row .cr-field[hidden]{display:none;}
+.checkbox{
+  width:20px; height:20px; flex:none; accent-color:var(--accent); cursor:pointer;
+}
+
+.crew-row{
+  display:flex; align-items:center; gap:8px; margin-top:12px; padding-top:12px;
+  border-top:1px dashed var(--border); font-size:12.5px; color:var(--muted);
+}
+.crew-row input{width:16px; height:16px; accent-color:var(--accent); cursor:pointer;}
+.crew-row label{cursor:pointer;}
+.fixed-date-row{
+  display:flex; flex-wrap:wrap; align-items:flex-end; gap:12px; margin-top:10px; padding-top:10px;
+  border-top:1px dashed var(--border);
+}
+.fixed-date-row .field{flex:1 1 160px;}
+.fixed-date-row .hint{flex-basis:100%;}
+.autofit-box{
+  display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:12px; padding:10px 12px;
+  background:var(--surface-2); border:1px solid var(--border); border-radius:10px; font-size:12.5px;
+}
+.autofit-box input[type=number]{width:60px;}
+.autofit-box label{display:flex; align-items:center; gap:6px; cursor:pointer;}
+.autofit-box input[type=checkbox]{width:16px; height:16px; accent-color:var(--accent);}
+.parallel-tag{
+  font-family:var(--font-mono); font-size:10.5px; color:var(--ok);
+  background:color-mix(in srgb, var(--ok) 15%, var(--surface)); border:1px solid var(--ok);
+  border-radius:5px; padding:1px 5px; margin-left:6px;
+}
+.split-tag{
+  font-family:var(--font-mono); font-size:10.5px; color:#9c5700;
+  background:color-mix(in srgb, #9c5700 15%, var(--surface)); border:1px solid #9c5700;
+  border-radius:5px; padding:1px 5px; margin-left:6px;
+}
+
+.result-table{width:100%; border-collapse:collapse; font-size:13px;}
+.result-table th, .result-table td{
+  text-align:left; padding:8px 10px; border-bottom:1px solid var(--border);
+}
+.result-table th{color:var(--muted); font-weight:600; font-size:11.5px; text-transform:uppercase; letter-spacing:.03em;}
+.result-table td.num{font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
+.table-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:12px; margin-bottom:16px;}
+.table-wrap table{margin:0;}
+.table-wrap th, .table-wrap td{white-space:nowrap;}
+
+.crit-dot{display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--critical); margin-right:6px;}
+
+.gantt{display:flex; flex-direction:column; gap:10px;}
+.gantt-row{display:grid; grid-template-columns:150px 1fr; gap:10px; align-items:center;}
+.gantt-row .glabel{font-size:12.5px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.gantt-row .glabel .gsub{display:block; font-size:11px; color:var(--muted); font-family:var(--font-mono);}
+.gtrack{position:relative; height:22px; border-radius:6px; overflow:hidden; border:1px solid var(--border);}
+.gbar{
+  position:absolute; top:2px; bottom:2px; border-radius:4px; background:var(--accent);
+  display:flex; align-items:center; justify-content:center;
+}
+.gbar.critical{background:var(--critical);}
+.gbar span{font-family:var(--font-mono); font-size:10.5px; color:var(--accent-fg); background:rgba(0,0,0,0.0);}
+.gtarget{position:absolute; top:-2px; bottom:-2px; width:0; border-left:3px solid var(--critical); z-index:2;}
+.legend{display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:var(--muted); margin-top:10px;}
+.legend .sw{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:-1px; border:1px solid var(--border);}
+.legend .ln{display:inline-block; width:10px; height:2px; background:var(--critical); margin-right:5px; vertical-align:2px;}
+
+.note{font-size:12px; color:var(--muted); line-height:1.6; margin-top:6px;}
+.empty-state{
+  border:1px dashed var(--border); border-radius:12px; padding:24px; text-align:center;
+  color:var(--muted); font-size:13.5px;
+}
+footer.page{margin-top:26px; font-size:11.5px; color:var(--muted); line-height:1.7; border-top:1px solid var(--border); padding-top:14px;}
+</style>
+
+<header class="page">
+  <h1>전기 시공 일정 계산기</h1>
+  <p>착공일과 목표 준공일을 넣고 필요한 작업공정만 체크하면, 품셈 환산부터 휴일 제외, 목표일 초과 시 자동 일정 압축(병행 크루 투입)까지 electrical-construction-schedule 스킬과 동일한 계산식으로 즉시 확인할 수 있습니다.</p>
+  <span class="badge">⚠ 품셈 수치는 검증되지 않은 예시값입니다</span>
+</header>
+
+<section class="card" id="project-card">
+  <div class="card-head"><h2>1. 프로젝트 정보</h2></div>
+  <div class="field-grid">
+    <div class="field">
+      <label for="startDate">착공일</label>
+      <input type="date" id="startDate" value="2026-10-05">
+    </div>
+    <div class="field">
+      <label for="targetEndDate">목표 준공일 (선택)</label>
+      <input type="date" id="targetEndDate" value="2026-10-30">
+      <span class="hint">계산 결과와 비교해 여유/초과 일수를 보여줍니다. 비워두면 비교 없이 계산만 합니다.</span>
+    </div>
+  </div>
+  <div class="field" style="margin-top:12px;">
+    <label>작업 가능 요일</label>
+    <div class="weekday-row" id="weekdayRow"></div>
+  </div>
+  <div class="field" style="margin-top:12px;">
+    <label>공휴일 / 현장 휴무일</label>
+    <div class="holiday-row">
+      <input type="date" id="holidayInput">
+      <button class="btn" id="addHoliday" type="button">추가</button>
+    </div>
+    <div class="tag-list" id="holidayList"></div>
+  </div>
+  <div class="autofit-box">
+    <label><input type="checkbox" id="autoFitEnable" checked>목표일 초과 시 자동 일정 압축 시도</label>
+    <label>최대 추가 크루 수 <input type="number" id="autoFitMax" value="2" min="1" max="5"></label>
+    <span class="hint" style="flex-basis:100%;">기본은 모든 작업을 하나의 팀(같은 크루)이 순서대로 진행한다고 계산합니다. 목표일을 넘기면, 순서상 뒤에 있는 작업 중 하나를 별도 크루(추가 인력)로 분리해 병행시켜보고 맞출 수 있는지 자동으로 시도합니다.</span>
+  </div>
+</section>
+
+<section class="card" id="prep-card">
+  <div class="card-head">
+    <h2>2. 착공 준비 / 자재 리드타임<span class="task-code">선택</span></h2>
+    <label class="switch"><input type="checkbox" id="prepInclude" checked><span class="slider"></span></label>
+  </div>
+  <p class="card-sub">인허가 서류, 설계도서 검토, 수배전반 등 주요 자재 발주~반입 대기 기간처럼 인력 투입 없이 흘러가는 기간입니다.</p>
+  <div class="detail-body" id="prepBody">
+    <div class="field-grid">
+      <div class="field">
+        <label for="prepDays">소요일수 (일)</label>
+        <input type="number" id="prepDays" value="7" min="1">
+      </div>
+    </div>
+    <div class="crew-row">
+      <input type="checkbox" id="prepParallel">
+      <label for="prepParallel">다른 작업과 별도 크루로 병행 진행 (기본은 순서대로 진행)</label>
+    </div>
+    <div class="fixed-date-row">
+      <div class="field">
+        <label for="prepFixedStart">시작일 고정 (선택)</label>
+        <input type="date" id="prepFixedStart">
+      </div>
+      <div class="field">
+        <label for="prepFixedEnd">준공일 고정 (선택)</label>
+        <input type="date" id="prepFixedEnd">
+      </div>
+      <span class="hint">행사·임대장비 반입일처럼 날짜가 외부 요인으로 이미 정해진 경우만 채우세요. 비워두면 선후행 계산대로 자동 산출됩니다.</span>
+    </div>
+  </div>
+</section>
+
+<section class="card" id="switchgear-card">
+  <div class="card-head">
+    <h2>3. 수배전반설치<span class="task-code">task_type: 수배전반설치</span></h2>
+    <label class="switch"><input type="checkbox" id="switchgearInclude" checked><span class="slider"></span></label>
+  </div>
+  <p class="card-sub">이 공사 절차에 포함되나요? 기존 수배전반을 그대로 쓰는 증설 공사라면 꺼두세요.</p>
+  <div class="detail-body" id="switchgearBody">
+    <div class="field-grid">
+      <div class="field">
+        <label for="swPanel">설치 면수 (면)</label>
+        <input type="number" id="swPanel" value="4" min="1">
+      </div>
+      <div class="field">
+        <label for="swCrew">투입 인원 (명)</label>
+        <input type="number" id="swCrew" value="2" min="1">
+      </div>
+      <div class="field">
+        <label for="swProd">1인 1일 설치 면수 (선택)</label>
+        <input type="number" id="swProd" placeholder="예시 0.7" step="0.1" min="0.1">
+        <span class="hint">비워두면 예시값 0.7면/인/일 사용</span>
+      </div>
+    </div>
+    <div class="crew-row">
+      <input type="checkbox" id="switchgearParallel">
+      <label for="switchgearParallel">다른 작업과 별도 크루로 병행 진행 (기본은 순서대로 진행)</label>
+    </div>
+    <div class="fixed-date-row">
+      <div class="field">
+        <label for="switchgearFixedStart">시작일 고정 (선택)</label>
+        <input type="date" id="switchgearFixedStart">
+      </div>
+      <div class="field">
+        <label for="switchgearFixedEnd">준공일 고정 (선택)</label>
+        <input type="date" id="switchgearFixedEnd">
+      </div>
+      <span class="hint">예: 한전 입회일처럼 외부 요인으로 날짜가 정해진 경우만 채우세요.</span>
+    </div>
+  </div>
+</section>
+
+<section class="card" id="duct-card">
+  <div class="card-head">
+    <h2>4. 간선배관<span class="task-code">task_type: 간선배관</span></h2>
+    <label class="switch"><input type="checkbox" id="ductInclude" checked><span class="slider"></span></label>
+  </div>
+  <p class="card-sub">이 공사 절차에 포함되나요? 기존 간선을 그대로 쓰는 경우라면 꺼두세요.</p>
+  <div class="detail-body" id="ductBody">
+    <div class="field-grid">
+      <div class="field">
+        <label for="ductLength">배관 총 길이 (m)</label>
+        <input type="number" id="ductLength" value="400" min="1">
+      </div>
+      <div class="field">
+        <label for="ductRoute">배관 방식</label>
+        <select id="ductRoute">
+          <option value="전선관">전선관 (예시 25 m/인/일)</option>
+          <option value="케이블트레이" selected>케이블트레이 (예시 18 m/인/일)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="ductCrew">투입 인원 (명)</label>
+        <input type="number" id="ductCrew" value="2" min="1">
+      </div>
+      <div class="field">
+        <label for="ductProd">1인 1일 배관 길이 (선택)</label>
+        <input type="number" id="ductProd" placeholder="방식별 예시값" step="0.5" min="0.5">
+        <span class="hint">비워두면 방식별 예시값 사용</span>
+      </div>
+    </div>
+    <div class="crew-row">
+      <input type="checkbox" id="ductParallel">
+      <label for="ductParallel">다른 작업과 별도 크루로 병행 진행 (기본은 순서대로 진행)</label>
+    </div>
+    <div class="fixed-date-row">
+      <div class="field">
+        <label for="ductFixedStart">시작일 고정 (선택)</label>
+        <input type="date" id="ductFixedStart">
+      </div>
+      <div class="field">
+        <label for="ductFixedEnd">준공일 고정 (선택)</label>
+        <input type="date" id="ductFixedEnd">
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="card" id="panel-card">
+  <div class="card-head">
+    <h2>5. 층별분전반<span class="task-code">task_type: 층별분전반</span></h2>
+    <label class="switch"><input type="checkbox" id="panelInclude" checked><span class="slider"></span></label>
+  </div>
+  <p class="card-sub">이 공사 절차에 포함되나요?</p>
+  <div class="detail-body" id="panelBody">
+    <div class="field-grid">
+      <div class="field">
+        <label for="panelCount">설치 면수 (보통 층수)</label>
+        <input type="number" id="panelCount" value="6" min="1">
+      </div>
+      <div class="field">
+        <label for="panelWiring">주전원으로부터 배선 거리 합계 (m)</label>
+        <input type="number" id="panelWiring" value="300" min="1">
+      </div>
+      <div class="field">
+        <label for="panelCrew">투입 인원 (명)</label>
+        <input type="number" id="panelCrew" value="2" min="1">
+      </div>
+      <div class="field">
+        <label for="panelInstallProd">분전반 설치 품셈 (선택)</label>
+        <input type="number" id="panelInstallProd" placeholder="예시 1.5" step="0.1" min="0.1">
+        <span class="hint">비워두면 예시값 1.5면/인/일 사용</span>
+      </div>
+      <div class="field">
+        <label for="panelWiringProd">배선 포설 품셈 (선택)</label>
+        <input type="number" id="panelWiringProd" placeholder="예시 100" step="1" min="1">
+        <span class="hint">비워두면 예시값 100m/인/일 사용</span>
+      </div>
+    </div>
+    <div class="crew-row">
+      <input type="checkbox" id="panelParallel">
+      <label for="panelParallel">다른 작업과 별도 크루로 병행 진행 (기본은 순서대로 진행)</label>
+    </div>
+    <div class="fixed-date-row">
+      <div class="field">
+        <label for="panelFixedStart">시작일 고정 (선택)</label>
+        <input type="date" id="panelFixedStart">
+      </div>
+      <div class="field">
+        <label for="panelFixedEnd">준공일 고정 (선택)</label>
+        <input type="date" id="panelFixedEnd">
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="card" id="misc-card">
+  <div class="card-head"><h2>6. 기타 작업공정</h2></div>
+  <p class="card-sub">필요한 공정만 체크하세요. 물량화가 애매한 작업들이라 소요일수를 직접 입력받습니다 (품셈 계산 없음). 절연저항/접지저항 시험 · 시운전/부하시험 · 준공검사는 항상 이 순서로 맨 마지막에 배치되며, 접지공사 등 병행 진행 중인 작업까지 전부 끝난 뒤에만 시작하도록 자동 처리됩니다(병행 불가).</p>
+  <div class="checklist" id="miscList"></div>
+</section>
+
+<button class="btn primary block" id="calcBtn" type="button">일정 계산하기</button>
+
+<section id="resultSection" style="margin-top:22px;"></section>
+
+<footer class="page">
+  품셈(1인 1일 표준 작업량) 수치는 electrical-construction-schedule 스킬의 productivity_reference.md 예시표를 그대로 옮긴 검증되지 않은 값입니다.
+  실제 계약·보고용 공정표에는 공식 표준품셈(국토교통부 고시) 또는 회사 실적 데이터로 반드시 교체하세요.
+  계산 로직(소요일수 산출식·크루 단위 선후행·휴일 제외·목표 준공일 비교·자동 일정 압축)은 scripts/schedule_calculator.py와 동일합니다.
+  이 페이지는 브라우저 안에서만 동작하는 미리보기라 파일 다운로드는 지원하지 않습니다 — 실제 .xlsx 공정표 파일이 필요하면
+  Claude Code에서 이 스킬의 scripts/schedule_calculator.py → scripts/build_excel_schedule.py를 순서대로 실행하세요.
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  // ---- 요일 선택 UI ----
+  var WEEKDAYS = [
+    {label:"일", jsday:0, checked:false},
+    {label:"월", jsday:1, checked:true},
+    {label:"화", jsday:2, checked:true},
+    {label:"수", jsday:3, checked:true},
+    {label:"목", jsday:4, checked:true},
+    {label:"금", jsday:5, checked:true},
+    {label:"토", jsday:6, checked:false},
+  ];
+  var weekdayRow = document.getElementById("weekdayRow");
+  WEEKDAYS.forEach(function(w, i){
+    var lab = document.createElement("label");
+    lab.className = "chip-toggle" + (w.checked ? " on" : "");
+    lab.dataset.jsday = w.jsday;
+    lab.innerHTML = '<input type="checkbox" ' + (w.checked?"checked":"") + '>' + w.label;
+    lab.addEventListener("click", function(e){
+      e.preventDefault();
+      var input = lab.querySelector("input");
+      input.checked = !input.checked;
+      lab.classList.toggle("on", input.checked);
+    });
+    weekdayRow.appendChild(lab);
+  });
+  function getWorkdaySet(){
+    var set = new Set();
+    weekdayRow.querySelectorAll(".chip-toggle").forEach(function(lab){
+      if(lab.querySelector("input").checked) set.add(parseInt(lab.dataset.jsday,10));
+    });
+    return set;
+  }
+
+  var lastComputation = null; // 마지막 계산 결과 (엑셀 내보내기용)
+
+  // ---- 공휴일 태그 UI ----
+  var holidays = [];
+  var holidayList = document.getElementById("holidayList");
+  function renderHolidays(){
+    holidayList.innerHTML = "";
+    holidays.slice().sort().forEach(function(d){
+      var tag = document.createElement("span");
+      tag.className = "tag";
+      tag.innerHTML = '<span class="tabular">' + d + '</span>';
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = "×";
+      btn.addEventListener("click", function(){
+        holidays = holidays.filter(function(x){ return x !== d; });
+        renderHolidays();
+      });
+      tag.appendChild(btn);
+      holidayList.appendChild(tag);
+    });
+  }
+  document.getElementById("addHoliday").addEventListener("click", function(){
+    var v = document.getElementById("holidayInput").value;
+    if(v && holidays.indexOf(v) === -1){
+      holidays.push(v);
+      renderHolidays();
+    }
+  });
+
+  // ---- 포함 토글 -> 세부입력 표시/숨김 ----
+  function wireToggle(toggleId, bodyId){
+    var t = document.getElementById(toggleId);
+    var b = document.getElementById(bodyId);
+    function sync(){ b.hidden = !t.checked; }
+    t.addEventListener("change", sync);
+    sync();
+  }
+  wireToggle("prepInclude", "prepBody");
+  wireToggle("switchgearInclude", "switchgearBody");
+  wireToggle("ductInclude", "ductBody");
+  wireToggle("panelInclude", "panelBody");
+
+  // ---- 기타 작업공정 체크리스트 (물량화 애매 -> 소요일수 직접 입력) ----
+  var MISC_ITEMS = [
+    {id:"lighting", category:"조명/콘센트공사", label:"조명/콘센트 설치", sub:"일반 매입등, 콘센트, 스위치", days:5, checked:true, parallel:false},
+    {id:"fire", category:"소방전기공사", label:"소방전기 설치", sub:"감지기, 수신반 결선", days:4, checked:true, parallel:false},
+    {id:"ground", category:"접지공사", label:"접지공사", sub:"타 공종과 병행 가능한 경우가 많음", days:3, checked:true, parallel:true},
+    {id:"insulation", category:"시험/검사", label:"절연저항/접지저항 시험", sub:"전 구간 측정 · 항상 맨 마지막, 다른 모든 작업 완료 후 시작", days:2, checked:true, parallel:false, finalStage:true},
+    {id:"commission", category:"시운전", label:"시운전/부하시험", sub:"무부하 → 부하 시운전 · 시험/검사 다음", days:3, checked:true, parallel:false, finalStage:true},
+    {id:"handover", category:"준공", label:"준공검사", sub:"관공서 준공검사·인수인계 · 시운전 다음", days:2, checked:true, parallel:false, finalStage:true}
+  ];
+  var miscList = document.getElementById("miscList");
+  MISC_ITEMS.forEach(function(item){
+    var row = document.createElement("div");
+    row.className = "check-row";
+    var parallelToggle = item.finalStage ? ""
+      : '<label style="display:flex;align-items:center;gap:4px;margin:0;">' +
+          '<input type="checkbox" id="misc_' + item.id + '_parallel" ' + (item.parallel?"checked":"") + '>병행' +
+        '</label>';
+    row.innerHTML =
+      '<input type="checkbox" class="checkbox" id="misc_' + item.id + '_on" ' + (item.checked?"checked":"") + '>' +
+      '<div class="cr-label">' + item.label + '<span class="cr-sub">' + item.sub + '</span></div>' +
+      '<div class="cr-field" id="misc_' + item.id + '_field">' +
+        '<label for="misc_' + item.id + '_days" class="hint" style="margin:0;">소요일수</label>' +
+        '<input type="number" id="misc_' + item.id + '_days" value="' + item.days + '" min="1">' +
+        parallelToggle +
+      '</div>';
+    miscList.appendChild(row);
+    var cb = row.querySelector("#misc_" + item.id + "_on");
+    var field = row.querySelector("#misc_" + item.id + "_field");
+    function sync(){ field.hidden = !cb.checked; }
+    cb.addEventListener("change", sync);
+    sync();
+  });
+
+  // ---- 날짜 유틸 (schedule_calculator.py 와 동일 로직) ----
+  function parseDate(s){ var p = s.split("-").map(Number); return new Date(p[0], p[1]-1, p[2]); }
+  function fmt(d){
+    var y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), dd=String(d.getDate()).padStart(2,"0");
+    return y+"-"+m+"-"+dd;
+  }
+  function addDays(d,n){ var r = new Date(d); r.setDate(r.getDate()+n); return r; }
+  function isWorkday(d, workSet, holidaySet){
+    if(!workSet.has(d.getDay())) return false;
+    if(holidaySet.has(fmt(d))) return false;
+    return true;
+  }
+  function nextWorkday(d, workSet, holidaySet){
+    var cur = new Date(d);
+    while(!isWorkday(cur, workSet, holidaySet)) cur = addDays(cur,1);
+    return cur;
+  }
+  function addWorkingDays(start, nDays, workSet, holidaySet){
+    var d = nextWorkday(start, workSet, holidaySet);
+    var remaining = nDays - 1;
+    while(remaining > 0){
+      d = addDays(d,1);
+      if(isWorkday(d, workSet, holidaySet)) remaining--;
+    }
+    return d;
+  }
+  function previousWorkday(d, workSet, holidaySet){
+    var cur = new Date(d);
+    while(!isWorkday(cur, workSet, holidaySet)) cur = addDays(cur,-1);
+    return cur;
+  }
+  function subtractWorkingDays(end, nDays, workSet, holidaySet){
+    var d = previousWorkday(end, workSet, holidaySet);
+    var remaining = nDays - 1;
+    while(remaining > 0){
+      d = addDays(d,-1);
+      if(isWorkday(d, workSet, holidaySet)) remaining--;
+    }
+    return d;
+  }
+  function countWorkdaysBetween(start, end, workSet, holidaySet){
+    var count = 0, d = new Date(start);
+    while(d <= end){
+      if(isWorkday(d, workSet, holidaySet)) count++;
+      d = addDays(d,1);
+    }
+    return Math.max(1, count);
+  }
+
+  // ---- 공종별 품셈 기본값 (예시, productivity_reference.md 동일) ----
+  var DEFAULTS = {
+    switchgear: 0.7,
+    duct: {"전선관":25, "케이블트레이":18},
+    panelInstall: 1.5,
+    panelWiring: 100
+  };
+
+  function numOr(el, fallback){
+    var v = parseFloat(el.value);
+    return (isFinite(v) && v > 0) ? v : fallback;
+  }
+
+  function fixedDatesOf(prefix){
+    var s = document.getElementById(prefix + "FixedStart").value;
+    var e = document.getElementById(prefix + "FixedEnd").value;
+    return {
+      fixedStart: s ? parseDate(s) : null,
+      fixedEnd: e ? parseDate(e) : null
+    };
+  }
+
+  function buildTasks(){
+    var tasks = [];
+
+    if(document.getElementById("prepInclude").checked){
+      var days = Math.max(1, Math.ceil(parseFloat(document.getElementById("prepDays").value) || 1));
+      tasks.push(Object.assign({
+        id:"prep", category:"착공준비", name:"착공 준비 / 자재 리드타임",
+        duration:days,
+        crewId: document.getElementById("prepParallel").checked ? "prep" : "main"
+      }, fixedDatesOf("prep")));
+    }
+
+    if(document.getElementById("switchgearInclude").checked){
+      var panel = parseFloat(document.getElementById("swPanel").value) || 0;
+      var crew = Math.max(1, parseFloat(document.getElementById("swCrew").value) || 1);
+      var prod = numOr(document.getElementById("swProd"), DEFAULTS.switchgear);
+      var manDays = panel / prod;
+      var dur = Math.max(1, Math.ceil(manDays / crew));
+      tasks.push(Object.assign({
+        id:"switchgear", category:"수배전설치공사", name:"수배전반 설치",
+        detail: panel + "면, " + crew + "명, 품셈 " + prod + "면/인/일",
+        duration:dur,
+        crewId: document.getElementById("switchgearParallel").checked ? "switchgear" : "main"
+      }, fixedDatesOf("switchgear")));
+    }
+
+    if(document.getElementById("ductInclude").checked){
+      var length = parseFloat(document.getElementById("ductLength").value) || 0;
+      var route = document.getElementById("ductRoute").value;
+      var crew2 = Math.max(1, parseFloat(document.getElementById("ductCrew").value) || 1);
+      var prod2 = numOr(document.getElementById("ductProd"), DEFAULTS.duct[route] || 20);
+      var manDays2 = length / prod2;
+      var dur2 = Math.max(1, Math.ceil(manDays2 / crew2));
+      tasks.push(Object.assign({
+        id:"duct", category:"간선배관공사", name:"간선 배관 (" + route + ")",
+        detail: length + "m, " + crew2 + "명, 품셈 " + prod2 + "m/인/일",
+        duration:dur2,
+        crewId: document.getElementById("ductParallel").checked ? "duct" : "main"
+      }, fixedDatesOf("duct")));
+    }
+
+    if(document.getElementById("panelInclude").checked){
+      var pcount = parseFloat(document.getElementById("panelCount").value) || 0;
+      var wiring = parseFloat(document.getElementById("panelWiring").value) || 0;
+      var crew3 = Math.max(1, parseFloat(document.getElementById("panelCrew").value) || 1);
+      var instProd = numOr(document.getElementById("panelInstallProd"), DEFAULTS.panelInstall);
+      var wireProd = numOr(document.getElementById("panelWiringProd"), DEFAULTS.panelWiring);
+      var installManDays = pcount / instProd;
+      var wiringManDays = wiring / wireProd;
+      var dur3 = Math.max(1, Math.ceil(installManDays / crew3 + wiringManDays / crew3));
+      tasks.push(Object.assign({
+        id:"panel", category:"층별분전반공사", name:"층별 분전반 설치 및 배선",
+        detail: pcount + "면 + 배선 " + wiring + "m, " + crew3 + "명",
+        duration:dur3,
+        crewId: document.getElementById("panelParallel").checked ? "panel" : "main"
+      }, fixedDatesOf("panel")));
+    }
+
+    MISC_ITEMS.forEach(function(item){
+      var cb = document.getElementById("misc_" + item.id + "_on");
+      if(cb && cb.checked){
+        var days = Math.max(1, Math.ceil(parseFloat(document.getElementById("misc_" + item.id + "_days").value) || 1));
+        if(item.finalStage){
+          tasks.push({
+            id: item.id, category: item.category, name: item.label,
+            detail: item.label + " (" + days + "일, 직접 입력 · 전체 완료 후 순서대로)",
+            duration: days,
+            finalStage: true
+          });
+        } else {
+          var isParallel = document.getElementById("misc_" + item.id + "_parallel").checked;
+          tasks.push({
+            id: item.id, category: item.category, name: item.label,
+            detail: item.label + " (" + days + "일, 직접 입력)",
+            duration: days,
+            crewId: isParallel ? item.id : "main"
+          });
+        }
+      }
+    });
+
+    return tasks;
+  }
+
+  // ---- 하나의 작업을 (crewId 큐 기준) 주어진 시작 시각 이후로 배치 ----
+  function placeTask(t, earliest, workSet, holidaySet, warnings){
+    var start, end, duration;
+    if(t.fixedStart && t.fixedEnd){
+      start = t.fixedStart;
+      end = t.fixedEnd;
+      duration = countWorkdaysBetween(start, end, workSet, holidaySet);
+      if(start < earliest){
+        warnings.push("'" + t.name + "' 작업: 고정 시작일(" + fmt(start) + ")이 직전 작업 종료 다음 날(" + fmt(earliest) + ")보다 빠릅니다 — 일정 충돌 가능성이 있습니다.");
+      }
+    } else if(t.fixedStart){
+      start = t.fixedStart;
+      duration = t.duration;
+      if(start < earliest){
+        warnings.push("'" + t.name + "' 작업: 고정 시작일(" + fmt(start) + ")이 직전 작업 종료 다음 날(" + fmt(earliest) + ")보다 빠릅니다 — 일정 충돌 가능성이 있습니다.");
+      }
+      end = addWorkingDays(start, duration, workSet, holidaySet);
+    } else if(t.fixedEnd){
+      end = t.fixedEnd;
+      duration = t.duration;
+      start = subtractWorkingDays(end, duration, workSet, holidaySet);
+      if(start < earliest){
+        warnings.push("'" + t.name + "' 작업: 고정 준공일(" + fmt(end) + ") 기준으로 역산한 시작일(" + fmt(start) + ")이 직전 작업 종료 다음 날(" + fmt(earliest) + ")보다 빠릅니다 — 일정 충돌 가능성이 있습니다.");
+      }
+    } else {
+      start = nextWorkday(earliest, workSet, holidaySet);
+      duration = t.duration;
+      end = addWorkingDays(start, duration, workSet, holidaySet);
+    }
+    return {start:start, end:end, duration:duration};
+  }
+
+  // ---- 크루(같은 인력) 단위 일정 계산: 같은 crewId는 입력 순서대로 순차 진행,
+  // 다른 crewId는 서로 제약 없이 병행 진행 (schedule_calculator.py의 crew_id 로직과 동일).
+  // finalStage(절연저항/시험, 시운전, 준공검사)로 표시된 작업은 병행 크루를 포함한 다른
+  // 모든 작업이 끝난 뒤에만, 입력 순서대로 순차 진행하도록 별도로 마지막에 이어붙인다 —
+  // 병행 진행 중인 크루가 아직 안 끝났는데 시험 단계가 먼저 시작되는 일이 없게 하기 위함. ----
+  function computeSchedule(tasks, projectStart, workSet, holidaySet){
+    var normalTasks = tasks.filter(function(t){ return !t.finalStage; });
+    var finalTasks = tasks.filter(function(t){ return t.finalStage; });
+
+    var byCrew = {};
+    normalTasks.forEach(function(t){
+      var cid = t.crewId || "main";
+      (byCrew[cid] = byCrew[cid] || []).push(t);
+    });
+
+    var startEnd = {}; // id -> {start, end, duration}
+    var crewEnd = {};
+    var warnings = [];
+    Object.keys(byCrew).forEach(function(cid){
+      var cursor = null;
+      byCrew[cid].forEach(function(t){
+        var earliest = cursor ? addDays(cursor, 1) : projectStart;
+        var se = placeTask(t, earliest, workSet, holidaySet, warnings);
+        startEnd[t.id] = se;
+        cursor = se.end;
+      });
+      crewEnd[cid] = cursor;
+    });
+
+    var normalEnd = null;
+    Object.keys(crewEnd).forEach(function(cid){
+      if(!normalEnd || crewEnd[cid] > normalEnd) normalEnd = crewEnd[cid];
+    });
+    if(!normalEnd) normalEnd = addDays(projectStart, -1); // 일반 작업이 하나도 없는 경우
+
+    // finalStage 체인: 일반 작업 전체가 끝난 다음 날부터 입력 순서대로 순차 진행
+    var finalCursor = normalEnd;
+    finalTasks.forEach(function(t){
+      var earliest = addDays(finalCursor, 1);
+      var se = placeTask(t, earliest, workSet, holidaySet, warnings);
+      startEnd[t.id] = se;
+      finalCursor = se.end;
+    });
+
+    var projectEnd = finalTasks.length > 0 ? finalCursor : normalEnd;
+
+    var results = tasks.map(function(t){
+      var se = startEnd[t.id];
+      var critical = t.finalStage ? true : (+crewEnd[t.crewId || "main"] === +normalEnd);
+      var dateFixed = !!(t.fixedStart || t.fixedEnd);
+      return Object.assign({}, t, {start: se.start, end: se.end, duration: se.duration, critical: critical, dateFixed: dateFixed});
+    });
+
+    return {results: results, projectEnd: projectEnd, warnings: warnings};
+  }
+
+  // ---- 자동 일정 압축: 목표일을 넘기면, 임계경로(=makespan을 결정하는 크루) 안에서
+  // 작업이 2개 이상인 크루를 찾아 가장 뒤에 있는 작업을 새 크루로 분리해 병행시켜본다.
+  // 반복하며 목표일을 맞추거나 더 분리할 게 없거나 최대 횟수에 닿으면 멈춘다. ----
+  function autoFit(tasks, projectStart, workSet, holidaySet, targetEnd, maxExtraCrews){
+    var working = tasks.map(function(t){ return Object.assign({}, t); });
+    var changes = [];
+    var sched = computeSchedule(working, projectStart, workSet, holidaySet);
+
+    for(var round = 0; round < maxExtraCrews; round++){
+      if(!(sched.projectEnd > targetEnd)) break; // 이미 목표일 이내
+
+      var critResults = sched.results.filter(function(r){ return r.critical && !r.finalStage; });
+      var groupDays = {}, groupMembers = {};
+      critResults.forEach(function(r){
+        var cid = r.crewId || "main";
+        groupDays[cid] = (groupDays[cid] || 0) + r.duration;
+        (groupMembers[cid] = groupMembers[cid] || []).push(r.id);
+      });
+      var candidateCids = Object.keys(groupMembers).filter(function(cid){ return groupMembers[cid].length >= 2; });
+      if(candidateCids.length === 0) break; // 더 분리할 여지 없음
+
+      var bestCid = candidateCids.reduce(function(a,b){ return groupDays[b] > groupDays[a] ? b : a; });
+      var orderIndex = {};
+      working.forEach(function(t,i){ orderIndex[t.id] = i; });
+      var members = groupMembers[bestCid].slice().sort(function(a,b){ return orderIndex[a]-orderIndex[b]; });
+      var splitId = members[members.length - 1];
+      var newCid = bestCid + "__extra" + (round + 1);
+      var splitTask = working.find(function(t){ return t.id === splitId; });
+      changes.push({taskId: splitId, taskName: splitTask.name, fromCrew: bestCid, toCrew: newCid});
+      splitTask.crewId = newCid;
+
+      sched = computeSchedule(working, projectStart, workSet, holidaySet);
+    }
+
+    return {results: sched.results, projectEnd: sched.projectEnd, changes: changes, warnings: sched.warnings};
+  }
+
+  function runCalculation(){
+    var resultSection = document.getElementById("resultSection");
+    var tasks = buildTasks();
+    if(tasks.length === 0){
+      resultSection.innerHTML = '<div class="empty-state">포함된 작업이 없습니다. 위에서 최소 한 개 이상의 공종을 켜주세요.</div>';
+      return;
+    }
+
+    var workSet = getWorkdaySet();
+    var holidaySet = new Set(holidays);
+    var projectStart = parseDate(document.getElementById("startDate").value);
+
+    var targetEndStr = document.getElementById("targetEndDate").value;
+    var targetEnd = targetEndStr ? parseDate(targetEndStr) : null;
+    var autoFitEnabled = document.getElementById("autoFitEnable").checked;
+    var maxExtraCrews = Math.max(1, parseInt(document.getElementById("autoFitMax").value, 10) || 2);
+
+    var base = computeSchedule(tasks, projectStart, workSet, holidaySet);
+    var results = base.results;
+    var projectEnd = base.projectEnd;
+    var warnings = base.warnings;
+    var changes = [];
+    var preAutoFitEnd = null;
+
+    if(targetEnd && autoFitEnabled && projectEnd > targetEnd){
+      var fitted = autoFit(tasks, projectStart, workSet, holidaySet, targetEnd, maxExtraCrews);
+      if(fitted.changes.length > 0){
+        preAutoFitEnd = projectEnd;
+        results = fitted.results;
+        projectEnd = fitted.projectEnd;
+        changes = fitted.changes;
+        warnings = fitted.warnings;
+      }
+    }
+
+    var totalCalendarDays = Math.round((projectEnd - projectStart) / 86400000) + 1;
+    var varianceDays = targetEnd ? Math.round((targetEnd - projectEnd) / 86400000) : null;
+
+    // 타임라인 표시 범위는 실제 종료일과 목표일 중 더 늦은 쪽까지 확장해, 초과分도 눈에 보이게 한다.
+    var timelineEnd = projectEnd;
+    if(targetEnd && targetEnd > timelineEnd) timelineEnd = targetEnd;
+    var timelineDays = Math.round((timelineEnd - projectStart) / 86400000) + 1;
+
+    lastComputation = {
+      results: results, projectStart: projectStart, projectEnd: projectEnd,
+      workSet: workSet, holidaySet: holidaySet, targetEnd: targetEnd,
+      varianceDays: varianceDays, autoFitChanges: changes, preAutoFitEnd: preAutoFitEnd,
+      warnings: warnings
+    };
+
+    renderResults(results, projectStart, projectEnd, totalCalendarDays, workSet, holidaySet,
+                  targetEnd, varianceDays, timelineDays, changes, preAutoFitEnd, autoFitEnabled, warnings);
+  }
+
+  function renderResults(results, projectStart, projectEnd, totalDays, workSet, holidaySet,
+                          targetEnd, varianceDays, timelineDays, autoFitChanges, preAutoFitEnd, autoFitEnabled, scheduleWarnings){
+    var html = "";
+    var splitIds = new Set((autoFitChanges || []).map(function(c){ return c.taskId; }));
+
+    if(scheduleWarnings && scheduleWarnings.length > 0){
+      html += '<p class="note" style="color:var(--critical); font-weight:600; background:color-mix(in srgb, var(--critical) 10%, var(--surface)); border:1px solid var(--critical); border-radius:10px; padding:10px 12px;">' +
+        '⚠ 날짜 고정 충돌: ' + scheduleWarnings.map(escapeHtml).join(' / ') + '</p>';
+    }
+
+    html += '<div class="summary-row">';
+    html += summaryTile("포함 작업 수", results.length + "건", "");
+    html += summaryTile("전체 공사기간", totalDays + "일", "accent");
+    html += summaryTile("착공일", fmt(projectStart), "");
+    html += summaryTile("계산된 준공일", fmt(projectEnd), "");
+    if(targetEnd){
+      var onSchedule = varianceDays >= 0;
+      html += summaryTile("목표 대비", (onSchedule ? "여유 " : "초과 ") + Math.abs(varianceDays) + "일", onSchedule ? "ok" : "warn");
+    }
+    html += '</div>';
+
+    if(autoFitChanges && autoFitChanges.length > 0){
+      var changeList = autoFitChanges.map(function(c){ return "'" + escapeHtml(c.taskName) + "'"; }).join(", ");
+      var stillOver = varianceDays < 0;
+      html += '<p class="note" style="background:color-mix(in srgb, #9c5700 12%, var(--surface)); border:1px solid #9c5700; border-radius:10px; padding:10px 12px; color:#9c5700; font-weight:600;">' +
+        '🔧 자동 일정 압축 적용: ' + changeList + ' 작업에 별도 크루(추가 인력)를 투입해 병행 처리했습니다. ' +
+        '(압축 전 준공일 ' + fmt(preAutoFitEnd) + ' → ' + fmt(projectEnd) + ') 실제로 이만큼 인력을 추가 투입할 수 있는지 현장과 확인하세요.' +
+        (stillOver ? ' 그래도 목표일보다 ' + Math.abs(varianceDays) + '일 초과합니다 — 최대 추가 크루 수를 늘리거나 다른 작업도 "병행"으로 체크해보세요.' : '') +
+        '</p>';
+    } else if(targetEnd && varianceDays < 0){
+      var reason = autoFitEnabled
+        ? '같은 크루로 묶여 임계경로에 있는 작업이 없어 자동 압축을 적용하지 못했습니다.'
+        : '자동 일정 압축이 꺼져 있습니다. 켜면 병행 가능한 작업을 자동으로 찾아봅니다.';
+      html += '<p class="note" style="color:var(--critical); font-weight:600;">⚠ 목표 준공일(' + fmt(targetEnd) + ')보다 ' + Math.abs(varianceDays) + '일 늦게 끝날 것으로 계산됩니다. ' + reason + ' 투입 인원을 늘리거나 일부 작업에 "병행" 체크를 해보세요.</p>';
+    }
+
+    html += '<div class="table-wrap"><table class="result-table"><thead><tr>' +
+      '<th>No</th><th>공종</th><th>내용</th><th>시작일</th><th>종료일</th><th>기간</th>' +
+      '</tr></thead><tbody>';
+    results.forEach(function(r, i){
+      var tag = "";
+      if(r.dateFixed) tag = '<span class="split-tag" style="color:#1F4E78;border-color:#1F4E78;background:color-mix(in srgb, #1F4E78 15%, var(--surface));">날짜 고정</span>';
+      else if(splitIds.has(r.id)) tag = '<span class="split-tag">자동 압축</span>';
+      else if((r.crewId || "main") !== "main") tag = '<span class="parallel-tag">병행</span>';
+      html += '<tr>' +
+        '<td class="num">' + (i+1) + '</td>' +
+        '<td>' + (r.critical ? '<span class="crit-dot"></span>' : '') + escapeHtml(r.category) + tag + '</td>' +
+        '<td>' + escapeHtml(r.detail || r.name) + '</td>' +
+        '<td class="num tabular">' + fmt(r.start) + '</td>' +
+        '<td class="num tabular">' + fmt(r.end) + '</td>' +
+        '<td class="num tabular">' + r.duration + '일</td>' +
+        '</tr>';
+    });
+    html += '</tbody></table></div>';
+
+    var targetOffsetPct = null;
+    if(targetEnd){
+      var targetOffset = Math.round((targetEnd - projectStart) / 86400000);
+      targetOffsetPct = ((targetOffset + 1) / timelineDays) * 100;
+    }
+
+    html += '<h2 style="font-size:15px; margin-bottom:10px;">공정 타임라인</h2>';
+    html += '<div class="gantt">';
+    results.forEach(function(r){
+      var startOffset = Math.round((r.start - projectStart) / 86400000);
+      var durCalendar = Math.round((r.end - r.start) / 86400000) + 1;
+      var left = (startOffset / timelineDays) * 100;
+      var width = (durCalendar / timelineDays) * 100;
+      html += '<div class="gantt-row">' +
+        '<div class="glabel">' + escapeHtml(r.category) + '<span class="gsub">' + r.duration + '일' + ((r.crewId||"main")!=="main" ? " · "+r.crewId : "") + '</span></div>' +
+        '<div class="gtrack" style="background-image:' + trackGradient(projectStart, timelineDays, workSet, holidaySet) + '">' +
+        '<div class="gbar' + (r.critical ? ' critical' : '') + '" style="left:' + left + '%; width:' + Math.max(width,2) + '%;"><span>' + r.duration + '</span></div>' +
+        (targetOffsetPct !== null ? '<div class="gtarget" style="left:' + targetOffsetPct + '%;"></div>' : '') +
+        '</div></div>';
+    });
+    html += '</div>';
+    html += '<div class="legend">' +
+      '<span><span class="sw" style="background:var(--critical)"></span>임계경로(전체 공사기간을 좌우하는 작업)</span>' +
+      '<span><span class="sw" style="background:var(--accent)"></span>여유 있는 작업(병행 크루)</span>' +
+      '<span><span class="sw" style="background:var(--weekend)"></span>주말</span>' +
+      '<span><span class="sw" style="background:var(--holiday)"></span>공휴일/휴무일</span>' +
+      (targetOffsetPct !== null ? '<span><span class="ln"></span>목표 준공일</span>' : '') +
+      '</div>';
+
+    html += '<p class="note">기본적으로 모든 작업은 하나의 팀("main" 크루)이 순서대로 진행한다고 계산합니다. 각 카드의 "병행" 체크박스를 켜면 그 작업은 별도 크루로 취급되어 처음부터 다른 작업과 동시에 진행됩니다.</p>';
+
+    html += '<button class="btn excel" id="exportExcelBtn" type="button">📊 엑셀 시트로 저장</button>';
+    html += '<div class="export-status" id="exportStatus"></div>';
+
+    document.getElementById("resultSection").innerHTML = html;
+  }
+
+  function summaryTile(label, value, variant){
+    return '<div class="summary-tile' + (variant ? ' ' + variant : '') + '">' +
+      '<div class="label">' + label + '</div><div class="value tabular">' + value + '</div></div>';
+  }
+
+  function trackGradient(projectStart, totalDays, workSet, holidaySet){
+    var stops = [];
+    for(var i=0;i<totalDays;i++){
+      var d = addDays(projectStart, i);
+      var color = "var(--track)";
+      if(holidaySet.has(fmt(d))) color = "var(--holiday)";
+      else if(!workSet.has(d.getDay())) color = "var(--weekend)";
+      var p1 = (i/totalDays*100).toFixed(3);
+      var p2 = ((i+1)/totalDays*100).toFixed(3);
+      stops.push(color + " " + p1 + "%", color + " " + p2 + "%");
+    }
+    return "linear-gradient(to right, " + stops.join(",") + ")";
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+
+  // ---- 엑셀 내보내기 (scripts/build_excel_schedule.py 와 동일한 레이아웃을 ExcelJS로 재현) ----
+  var THIN_BORDER = {
+    top: {style:"thin", color:{argb:"FFD9D9D9"}},
+    bottom: {style:"thin", color:{argb:"FFD9D9D9"}},
+    left: {style:"thin", color:{argb:"FFD9D9D9"}},
+    right: {style:"thin", color:{argb:"FFD9D9D9"}}
+  };
+  function cloneBorder(b){ return JSON.parse(JSON.stringify(b)); }
+
+  async function buildWorkbookBlob(comp){
+    var ExcelJS = window.ExcelJS;
+    var wb = new ExcelJS.Workbook();
+    var ws = wb.addWorksheet("공사 스케줄");
+
+    var start = comp.projectStart, end = comp.projectEnd;
+    var days = [];
+    for(var d = new Date(start); d <= end; d = addDays(d,1)) days.push(new Date(d));
+
+    var FIRST_DAY_COL = 7; // A~F(6칸) 다음부터 일자별 칸
+    var lastCol = FIRST_DAY_COL + days.length - 1;
+
+    ws.mergeCells(1,1,1,lastCol);
+    var titleCell = ws.getCell(1,1);
+    titleCell.value = "전기 시공 일정 계산기 (브라우저 테스트) 공정표";
+    titleCell.font = {bold:true, size:14};
+
+    var totalCalendarDays = Math.round((end - start)/86400000) + 1;
+    var summary = "작성일: " + fmt(new Date()) + "  /  공사 기간: " + fmt(start) + " ~ " + fmt(end) + " (" + totalCalendarDays + "일)";
+    if(comp.targetEnd){
+      var onSchedule = comp.varianceDays >= 0;
+      summary += "  /  목표 준공일: " + fmt(comp.targetEnd) + " (계산된 종료일 대비 " + (onSchedule?"여유":"초과") + " " + Math.abs(comp.varianceDays) + "일)";
+    }
+    ws.mergeCells(2,1,2,lastCol);
+    var summaryCell = ws.getCell(2,1);
+    summaryCell.value = summary;
+    if(comp.targetEnd && comp.varianceDays < 0) summaryCell.font = {color:{argb:"FFC00000"}, bold:true};
+
+    ws.mergeCells(3,1,3,lastCol);
+    if(comp.autoFitChanges && comp.autoFitChanges.length > 0){
+      var names = comp.autoFitChanges.map(function(c){ return c.taskName; }).join(", ");
+      var note3 = "자동 일정 압축 적용: " + names + " 작업에 별도 크루(추가 인력) 투입을 가정해 병행 처리 (압축 전 종료일 " +
+        fmt(comp.preAutoFitEnd) + " -> " + fmt(end) + "). 실제 추가 인력 투입 가능 여부를 현장과 반드시 확인하세요.";
+      var c3 = ws.getCell(3,1); c3.value = note3; c3.font = {color:{argb:"FF9C5700"}, italic:true};
+    }
+
+    var splitIds = new Set((comp.autoFitChanges||[]).map(function(c){ return c.taskId; }));
+
+    ws.mergeCells(4,1,4,lastCol);
+    if(comp.warnings && comp.warnings.length > 0){
+      var c4 = ws.getCell(4,1); c4.value = "⚠ " + comp.warnings.join(" / "); c4.font = {color:{argb:"FFC00000"}, italic:true};
+    }
+
+    var headerRow1 = 5, headerRow2 = 6, firstDataRow = 7;
+    var TABLE_COLS = ["No","공종","내용","시작일","종료일","기간(일)"];
+    TABLE_COLS.forEach(function(name, i){
+      ws.mergeCells(headerRow1, i+1, headerRow2, i+1);
+      var c = ws.getCell(headerRow2, i+1);
+      c.value = name;
+      c.fill = {type:"pattern", pattern:"solid", fgColor:{argb:"FF1F4E78"}};
+      c.font = {color:{argb:"FFFFFFFF"}, bold:true};
+      c.alignment = {horizontal:"center", vertical:"middle"};
+      c.border = cloneBorder(THIN_BORDER);
+    });
+
+    var workSet = comp.workSet, holidaySet = comp.holidaySet;
+    var monthStartCol = {};
+    days.forEach(function(d, i){
+      var col = FIRST_DAY_COL + i;
+      var key = d.getFullYear() + "-" + d.getMonth();
+      if(monthStartCol[key] === undefined) monthStartCol[key] = col;
+      var c = ws.getCell(headerRow2, col);
+      c.value = d.getDate();
+      c.font = {size:8};
+      c.alignment = {horizontal:"center"};
+      c.border = cloneBorder(THIN_BORDER);
+      var isHoliday = holidaySet.has(fmt(d));
+      var isWeekend = !workSet.has(d.getDay());
+      if(isHoliday) c.fill = {type:"pattern", pattern:"solid", fgColor:{argb:"FFFCE4D6"}};
+      else if(isWeekend) c.fill = {type:"pattern", pattern:"solid", fgColor:{argb:"FFF2F2F2"}};
+      ws.getColumn(col).width = 2.6;
+    });
+    Object.keys(monthStartCol).forEach(function(key){
+      var c1 = monthStartCol[key];
+      var monthIdx = parseInt(key.split("-")[1],10);
+      var lastIdxForMonth = c1;
+      days.forEach(function(d,i){ if((d.getFullYear()+"-"+d.getMonth())===key) lastIdxForMonth = FIRST_DAY_COL+i; });
+      ws.mergeCells(headerRow1, c1, headerRow1, lastIdxForMonth);
+      var mc = ws.getCell(headerRow1, c1);
+      mc.value = (monthIdx+1) + "월";
+      mc.fill = {type:"pattern", pattern:"solid", fgColor:{argb:"FF1F4E78"}};
+      mc.font = {color:{argb:"FFFFFFFF"}, bold:true};
+      mc.alignment = {horizontal:"center"};
+    });
+
+    comp.results.forEach(function(r, idx){
+      var row = firstDataRow + idx;
+      var detailText = r.detail || r.name;
+      if(r.dateFixed) detailText += " (날짜 고정)";
+      else if(splitIds.has(r.id)) detailText += " (자동 압축: 별도 크루 병행)";
+      else if((r.crewId||"main") !== "main") detailText += " (병행)";
+      var values = [idx+1, r.category || r.name, detailText, fmt(r.start), fmt(r.end), r.duration];
+      values.forEach(function(v, ci){
+        var c = ws.getCell(row, ci+1);
+        c.value = v;
+        c.border = cloneBorder(THIN_BORDER);
+        c.alignment = {horizontal:"center", vertical:"middle"};
+        if(ci === 2 && r.dateFixed) c.font = {color:{argb:"FF1F4E78"}, bold:true};
+        else if(ci === 2 && splitIds.has(r.id)) c.font = {color:{argb:"FF9C5700"}, italic:true};
+      });
+      var fillColor = r.critical ? "FFC00000" : "FF4472C4";
+      days.forEach(function(d, i){
+        var col = FIRST_DAY_COL + i;
+        var cell = ws.getCell(row, col);
+        cell.border = cloneBorder(THIN_BORDER);
+        if(r.start <= d && d <= r.end){
+          cell.fill = {type:"pattern", pattern:"solid", fgColor:{argb:fillColor}};
+        }
+      });
+    });
+
+    if(comp.targetEnd && start <= comp.targetEnd && comp.targetEnd <= end){
+      var targetOffset = Math.round((comp.targetEnd - start)/86400000);
+      var targetCol = FIRST_DAY_COL + targetOffset;
+      var lastDataRow = firstDataRow + comp.results.length - 1;
+      for(var rr = headerRow1; rr <= lastDataRow; rr++){
+        var tc = ws.getCell(rr, targetCol);
+        var existing = tc.border || {};
+        tc.border = Object.assign({}, existing, {right: {style:"thick", color:{argb:"FFC00000"}}});
+      }
+    }
+
+    ws.getColumn(1).width = 5;
+    ws.getColumn(2).width = 18;
+    ws.getColumn(3).width = 26;
+    ws.getColumn(4).width = 12;
+    ws.getColumn(5).width = 12;
+    ws.getColumn(6).width = 8;
+    ws.views = [{state:"frozen", xSplit: FIRST_DAY_COL-1, ySplit: firstDataRow-1}];
+
+    var buf = await wb.xlsx.writeBuffer();
+    return new Blob([buf], {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+  }
+
+  document.getElementById("resultSection").addEventListener("click", async function(e){
+    if(e.target && e.target.id === "exportExcelBtn"){
+      var statusEl = document.getElementById("exportStatus");
+      var btn = e.target;
+      if(!lastComputation){ return; }
+      if(!window.ExcelJS){
+        statusEl.textContent = "엑셀 라이브러리를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.";
+        return;
+      }
+      btn.disabled = true;
+      statusEl.textContent = "엑셀 파일 생성 중...";
+      try {
+        var blob = await buildWorkbookBlob(lastComputation);
+        var filename = "공사스케줄_" + fmt(lastComputation.projectStart) + ".xlsx";
+        var downloads = window.claude ? await window.claude.use("downloads") : null;
+        if(downloads){
+          // claude.ai 아티팩트 안: 플랫폼의 저장 확인창을 통해 전달
+          var result = await downloads.save({filename: filename, data: blob});
+          statusEl.textContent = result.status === "saved" ? "저장 완료: " + filename : "전달 완료: " + filename;
+        } else {
+          // 독립 웹사이트로 배포된 경우: 표준 브라우저 다운로드로 대체 (API 키 불필요)
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(function(){ URL.revokeObjectURL(url); }, 10000);
+          statusEl.textContent = "다운로드 시작: " + filename;
+        }
+      } catch(err){
+        if(err && err.code === "declined"){
+          statusEl.textContent = "저장을 취소했습니다.";
+        } else {
+          statusEl.textContent = "엑셀 생성 중 오류가 발생했습니다: " + (err && err.message ? err.message : err);
+        }
+      } finally {
+        btn.disabled = false;
+      }
+    }
+  });
+
+  document.getElementById("calcBtn").addEventListener("click", runCalculation);
+  renderHolidays();
+  runCalculation(); // 샘플 값으로 초기 자동 계산
+})();
+</script>
